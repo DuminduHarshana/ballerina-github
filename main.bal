@@ -3,7 +3,7 @@ import ballerina/http;
 listener http:Listener httpListener =new (8080);
 map<string> headers = {
     "Accept": "application/vnd.github.v3+json",
-    "Authorization": "Bearer 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",
+    "Authorization": "Bearer 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",
     "X-GitHub-Api-Version":"2022-11-28"
 };
  http:Client github = check new ("https://api.github.com");
@@ -35,11 +35,11 @@ resource function get getrepodet(string ownername, string reponame) returns json
    json[] data;
         json returnData;
         do {
-            data = check github->get(searchUrl(ownername,reponame), headers);
+            data = check github->get(searchUrl(ownername,reponame));
             returnData = {
                 ownername: ownername,
                 reponame:reponame,
-                commitCount: data.length()
+                commitCount: data.toString()
             };
         } on fail var e {
             returnData = {"message": e.toString()};
@@ -60,10 +60,10 @@ function  getrepos(string owner)returns json |error{
    json[] data;
         json returnData;
         do {
-            data = check github->get(repoUrl(ownername), headers);
+            data = check github->get("/users/" + ownername + "/repos");
             returnData = {
                 ownername: ownername,
-                commitCount: data.length()
+                reponame: data.toString()
             };
         } on fail var e {
             returnData = {"message": e.toString()};
