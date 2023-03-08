@@ -8,51 +8,72 @@ map<string> headers = {
 };
  http:Client github = check new ("https://api.github.com");
 //just for the testing main is implemented
-public function main() returns error?? {
-    string Owner = "DuminduHarshana";
-    string Reponame = "aeroAndroidApp";
-    json|error repodet = getrepodet(Owner, Reponame);
-    if repodet is json {
-       io:print(repodet);
+// public function main() returns error?? {
+//     string Owner = "DuminduHarshana";
+//     string Reponame = "aeroAndroidApp";
+//     json|error repodet = getrepodet(Owner, Reponame);
+//     if repodet is json {
+//        io:print(repodet);
         
-    // Result result = check repodet.cloneWithType();
-    // io:print(result.owner);
-    }
-    json|error repos = getrepos(Owner);
-    if repos is json {
-      io:print(repos);
+//     // Result result = check repodet.cloneWithType();
+//     // io:print(result.owner);
+//     }
+//     json|error repos = getrepos(Owner);
+//     if repos is json {
+//       io:print(repos);
 
 
-    }
+//     }
 
-}
+// }
 
 //uncomment for make this a service 
-//service /getrepodetail on new http:Listener(8080) {
+service /getrepodetail on httpListener {
 
-function getrepodet(string owner, string reponame) returns json|error {
+resource function get getrepodet(string ownername, string reponame) returns json|error {
 
-    //connecting github with http client
-   
+   json[] data;
+        json returnData;
+        do {
+            data = check github->get(searchUrl(ownername,reponame), headers);
+            returnData = {
+                ownername: ownername,
+                reponame:reponame,
+                commitCount: data.length()
+            };
+        } on fail var e {
+            returnData = {"message": e.toString()};
+        }
 
-    json search = check github->get(searchUrl(owner, reponame));
-    return search;
+        return returnData;  
+    
+ }
 }
-//}
+
 
 function  getrepos(string owner)returns json |error{
     json rpodata= check github->get(repoUrl(owner));
     io:print(rpodata);
 }
-// service /getrepos on new http:Listener(8081){
-// resource function get getrepos(string owner)returns string |error{
-//     http:Client git =check  new("https://api.github.com");
-//     json rpodata= check git->get(repoUrl(owner));
-//     string data = rpodata.toBalString();
-//     return data;
-// }
+ service /getrepos on httpListener{
+ resource function get getrepos(string ownername)returns json |error{
+   json[] data;
+        json returnData;
+        do {
+            data = check github->get(repoUrl(ownername), headers);
+            returnData = {
+                ownername: ownername,
+                commitCount: data.length()
+            };
+        } on fail var e {
+            returnData = {"message": e.toString()};
+        }
 
-// }
+        return returnData;  
+    
+ }
+
+ }
 
 //function for appeding owner name and reponame
 function searchUrl(string owner, string reponame) returns string {
