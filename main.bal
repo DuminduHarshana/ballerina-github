@@ -35,7 +35,7 @@ resource function get getrepodet(string ownername, string reponame) returns json
    json[] data;
         json returnData;
         do {
-            data = check github->get(searchUrl(ownername,reponame));
+            data = check github->get(searchUrl(ownername,reponame),headers);
             returnData = {
                 ownername: ownername,
                 reponame:reponame,
