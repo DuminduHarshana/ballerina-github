@@ -1,41 +1,40 @@
-import React, { useState } from 'react';
+import React, { Component } from 'react';
 
-function GitHubLoginButton() {
-  const [userData, setUserData] = useState(null);
-  const [accessToken, setAccessToken] = useState(null);
+import GitHubLogin from 'react-github-login';
 
-  const handleLogin = () => {
-    const redirectURI = 'http://localhost:3000/auth/github/callback';
-    const clientID = '656a76c5b00a5d6bb711';
-    const scope = 'user';
+class App extends Component {
 
-    window.location = `https://github.com/login/oauth/authorize?client_id=${clientID}&scope=${scope}&redirect_uri=${redirectURI}`;
-  };
+  render() {
 
-  const handleCallback = async () => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const code = searchParams.get('code');
+    const onSuccessGithub = (response) => {
+      console.log(response.code);
+    } 
 
-    const response = await fetch('/auth/github', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
+    return (
+      <div className="App" align="center">
+        <h1>LOGIN WITH GITHUB AND MICROSOFT</h1>
 
-    const data = await response.json();
-    setUserData(data.user);
-    setAccessToken(data.accessToken);
-  };
+          {/*CLIENTID REDIRECTURI NOT CREATED YET*/}
 
-  return (
-    <>
-      {accessToken ? (
-        <p>Welcome, {userData.login}!</p>
-      ) : (
-        <button onClick={handleLogin}>Log in with GitHub</button>
-      )}
-    </>
-  );
+          <GitHubLogin clientId="_"
+            onSuccess={onSuccessGithub}
+            buttonText="LOGIN WITH GITHUB"
+            className="git-login"
+            valid={true}
+            redirectUri="_"
+          />
+
+          <br />
+          <br />
+
+          
+
+        
+    
+
+      </div>
+    );
+  }
 }
 
-export default GitHubLoginButton;
+export default App;
