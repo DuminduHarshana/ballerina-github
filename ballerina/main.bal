@@ -11,7 +11,6 @@ json token = {};
 // };
 http:Client github = check new ("https://api.github.com");
 string BASE_URL = "https://api.github.com";
-
 string USER_RESOURCE_PATH = "/user";
 
 //just for the testing main is implemented
@@ -56,6 +55,32 @@ service / on gitListener {
 
     }
 }
+
+// Define the service
+
+service /githubApiService  on httpListener{
+
+    
+    resource function post getToken(http:Caller caller, http:Request request) returns error? {
+
+        string clientId = "00bba9c289b344fd4277";
+        string clientSecret = "a6d137fa4ac43ca8ef77d5673cce9026a84a7e3d";
+        string code = token.toString();
+
+        
+        string url = "https://github.com/login/oauth/access_token";
+        string payload = "client_id=" + clientId + "&client_secret=" + clientSecret + "&code=" + code;
+        http:Client client2 = check new("https://github.com/login/oauth/access_token");
+        http:Request accessTokenRequest = new;
+        accessTokenRequest.setPayload(payload);
+        accessTokenRequest.setHeader("Content-Type", "application/x-www-form-urlencoded");
+        accessTokenRequest.setHeader("Accept", "application/json");
+        http:Response accessTokenResponse = check client2->post(url, accessTokenRequest);
+        json accessToken = check accessTokenResponse.getJsonPayload();
+        check caller->respond(accessToken);
+    }
+}
+
  string OAUTH_TOKEN=token.toString();
 // service / on httpListener {
 //     resource function get token(string code) returns json|error {
