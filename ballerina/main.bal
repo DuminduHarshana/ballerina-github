@@ -1,14 +1,10 @@
 import ballerina/io;
 import ballerina/http;
+import ballerina/mime;
 
 listener http:Listener httpListener = new (8080);
 listener http:Listener gitListener = new (9090);
-json token = {};
-// map<string> headers = {
-//     "Accept": "application/vnd.github.v3+json",
-//     "Authorization": "Bearer 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",
-//     "X-GitHub-Api-Version":"2022-11-28"
-// };
+map<string> headers={};
 http:Client github = check new ("https://api.github.com");
 string BASE_URL = "https://api.github.com";
 string USER_RESOURCE_PATH = "/user";
@@ -31,6 +27,41 @@ string USER_RESOURCE_PATH = "/user";
 //     }
 
 // }
+type Contributor record {
+    string login;
+    int contributions;
+};
+
+service /individual on httpListener {
+    resource function get getAllContributors(string username, string reponame) returns Contributor[]|error {
+
+        Contributor[] contributors = [];
+
+        // Get the contributor details of the given username from the repository
+        json[] user = check github->get("/repos/" + username + "/" + reponame + "/contributors");
+
+        // Get the login name of the given contributor
+        string contributorLogin = check user[0].login;
+        io:print(contributorLogin);
+
+        // Get the contributors of the repository
+        json[] data = check github->get("/repos/" + username + "/" + reponame + "/contributors");
+        string stringResult = data.toString();
+        io:print(stringResult);
+        // Iterate through the contributors array in the response and add each contributor to the 'contributors' array
+        //      foreach var contributor in data {
+        //      if ( check contributor.login.toString() != contributorLogin) {
+        //         contributors.push({
+        //              login: contributor["login"].toString(),
+        //             contributions: <int>contributor["contributions"]
+        //         });
+        //      }
+        // }
+
+        return contributors;
+    }
+
+}
 
 @http:ServiceConfig {
 
@@ -43,74 +74,42 @@ string USER_RESOURCE_PATH = "/user";
 
 service / on gitListener {
 
-    resource function post githubLogin(http:Caller caller, http:Request req) returns error? {
-
-        // Extract the token from the request body
-        var jsonPayload = check req.getJsonPayload();
-        json token = check jsonPayload.token;
-        io:print(token);
-       
-
-        check caller->respond(token);
-
-    }
-}
-
-// Define the service
-
-service /githubApiService  on httpListener{
-
-    
-    resource function post getToken(http:Caller caller, http:Request request) returns error? {
-
+    resource function post githubLogin(@http:Payload map<json> token) returns json|error {
         string clientId = "00bba9c289b344fd4277";
         string clientSecret = "a6d137fa4ac43ca8ef77d5673cce9026a84a7e3d";
-        string code = token.toString();
+        string code = check token.token;
+        json returnData = {};
+        string j;
+        do {
+            json response = check github->post("/login/oauth/access_token",
+            {
 
-        
-        string url = "https://github.com/login/oauth/access_token";
-        string payload = "client_id=" + clientId + "&client_secret=" + clientSecret + "&code=" + code;
-        http:Client client2 = check new("https://github.com/login/oauth/access_token");
-        http:Request accessTokenRequest = new;
-        accessTokenRequest.setPayload(payload);
-        accessTokenRequest.setHeader("Content-Type", "application/x-www-form-urlencoded");
-        accessTokenRequest.setHeader("Accept", "application/json");
-        http:Response accessTokenResponse = check client2->post(url, accessTokenRequest);
-        json accessToken = check accessTokenResponse.getJsonPayload();
-        check caller->respond(accessToken);
-    }
-}
+                client_id: clientId,
+                client_secret: clientSecret,
+                code: code
+            },
+            {
+                Accept: mime:APPLICATION_JSON
+            });
 
- string OAUTH_TOKEN=token.toString();
-// service / on httpListener {
-//     resource function get token(string code) returns json|error {
-//         http:Client client2 = check new("https://github.com");
-//         string clientId = "00bba9c289b344fd4277";
-//         string clientSecret = "a6d137fa4ac43ca8ef77d5673cce9026a84a7e3d";
+            returnData = {
+                res: response
 
-//         http:Request request = new;
-//         request.addHeader("Content-Type", "application/json");
-//         json[] data;
-//         json payload;
-//         do {
-//             data = check client2->get("/oauth/access_token?client_id="+clientId+"&client_secret="+clientSecret+"&code="+code);
-//            string accessToken = data.toString();
-//           io:print(accessToken);
+            };
+            j = check response.access_token;
+            io:print(j);
+             headers = {
+                "Accept": "application/vnd.github.v3+json",
+                "Authorization": "Bearer" + j,
+                "X-GitHub-Api-Version": "2022-11-28"
+            };
 
-//         } on fail var e {
-//             payload = {"message": e.toString()};
-//         }
-//         return payload;
-//     }
-// }
-
-service /githubApi on httpListener {
-
-    resource function post getUserInfo(http:Caller caller, http:Request req) returns error? {
-        map<string|string[]> headers = {"Authorization": "Bearer " + OAUTH_TOKEN};
-        http:Response response = check github->get(USER_RESOURCE_PATH, headers);
-        io:println(response.getJsonPayload());
-        check caller->respond(response);
+        } on fail var err {
+            returnData = {
+                "message": err.toString()
+            };
+        }
+        return returnData;
     }
 }
 
@@ -196,7 +195,7 @@ service /getpullrq on httpListener {
         json[] data;
         json returnData;
         do {
-            data = check github->get("/repos/" + ownername + "/" + reponame + "/pulls");
+            data = check github->get("/repos/" + ownername + "/" + reponame + "/pulls", headers);
             returnData = {
                 ownername: ownername,
                 reponame: reponame,
